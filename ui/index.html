@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>15-Year Multi-Timeframe Strategy Backtest Dashboard</title>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <style>
+        :root {
+            --bg: #0b0f14;
+            --card-bg: #141a22;
+            --border: #2a3340;
+            --text-main: #f0f6fc;
+            --text-muted: #8b949e;
+            --accent-blue: #58a6ff;
+            --accent-green: #3fb950;
+            --accent-red: #f85149;
+            --accent-gold: #d29922;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        body { background-color: var(--bg); color: var(--text-main); padding: 24px 32px; }
+        
+        .header { margin-bottom: 24px; border-bottom: 1px solid var(--border); padding-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
+        .header h1 { font-size: 24px; font-weight: 700; color: var(--text-main); }
+        .header p { font-size: 13.5px; color: var(--text-muted); margin-top: 4px; }
+        .badge { background: #1c2430; border: 1px solid var(--border); padding: 6px 14px; border-radius: 20px; font-size: 12px; color: var(--accent-blue); font-weight: 600; letter-spacing: 0.5px; }
+        
+        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .kpi-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px; padding: 20px; transition: border-color 0.2s; }
+        .kpi-card:hover { border-color: var(--accent-blue); }
+        .kpi-label { font-size: 11.5px; color: var(--text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.6px; }
+        .kpi-value { font-size: 28px; font-weight: 700; margin-top: 8px; }
+        .kpi-sub { font-size: 12.5px; color: var(--text-muted); margin-top: 4px; }
+        .green { color: var(--accent-green); }
+        .red { color: var(--accent-red); }
+        .blue { color: var(--accent-blue); }
+        .gold { color: var(--accent-gold); }
+        
+        .section-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px; padding: 24px; margin-bottom: 28px; }
+        .section-title { font-size: 17px; font-weight: 700; margin-bottom: 18px; display: flex; justify-content: space-between; align-items: center; }
+        
+        .chart-legend-box { display: flex; gap: 16px; align-items: center; font-size: 12.5px; font-weight: 600; }
+        .legend-dot { width: 12px; height: 12px; border-radius: 3px; display: inline-block; margin-right: 6px; }
+        
+        table { width: 100%; border-collapse: collapse; font-size: 13.5px; text-align: left; }
+        th { background: #1c2430; color: var(--text-muted); font-weight: 600; padding: 12px 16px; border-bottom: 1px solid var(--border); text-transform: uppercase; font-size: 11.5px; letter-spacing: 0.5px; }
+        td { padding: 12px 16px; border-bottom: 1px solid var(--border); color: var(--text-main); }
+        tr:hover td { background: rgba(88, 166, 255, 0.04); }
+        
+        /* Large Trade Gallery Grid */
+        .gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(580px, 1fr)); gap: 24px; }
+        .gallery-item { background: #18202a; border: 1.5px solid var(--border); border-radius: 10px; overflow: hidden; cursor: pointer; transition: transform 0.2s, border-color 0.2s; box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
+        .gallery-item:hover { transform: translateY(-3px); border-color: var(--accent-blue); }
+        .gallery-item img { width: 100%; height: auto; display: block; }
+        .gallery-caption { padding: 12px 16px; font-size: 12px; font-weight: 600; color: var(--text-muted); background: #121820; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border); }
+        .btn-view { background: #212c3b; color: var(--accent-blue); border: 1px solid var(--border); padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+
+        /* Modal Lightbox for High-Res Inspection */
+        .modal { display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background: rgba(5, 8, 12, 0.92); backdrop-filter: blur(4px); justify-content: center; align-items: center; padding: 24px; }
+        .modal-content { max-width: 95%; max-height: 92vh; border-radius: 8px; border: 2px solid var(--accent-blue); box-shadow: 0 10px 40px rgba(0,0,0,0.8); }
+        .modal-close { position: absolute; top: 20px; right: 28px; color: #ffffff; font-size: 32px; font-weight: bold; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div>
+            <h1>15-Year Multi-Timeframe Strategy Backtest Dashboard</h1>
+            <p>NASDAQ (QQQ) & S&P 500 (SPY) | Period: 2011 – 2026 | New York Session Only | 1:1 RR | News Filter Active</p>
+        </div>
+        <div class="badge">15-YEAR INSTITUTIONAL AUDIT</div>
+    </div>
+
+    <div class="kpi-grid">
+        <div class="kpi-card">
+            <div class="kpi-label">Baseline Initial Capital</div>
+            <div class="kpi-value gold">$100,000</div>
+            <div class="kpi-sub">Bottom Anchor Baseline</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">Final Net Capital</div>
+            <div class="kpi-value green">$145,886.98</div>
+            <div class="kpi-sub">Total Return: <strong class="green">+45.89%</strong></div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">Overall Win Rate</div>
+            <div class="kpi-value green">53.17%</div>
+            <div class="kpi-sub">344 Wins / 303 Losses</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">Max Drawdown</div>
+            <div class="kpi-value red">23.20%</div>
+            <div class="kpi-sub">Controlled Risk Tolerance</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">Profit Factor</div>
+            <div class="kpi-value blue">1.14</div>
+            <div class="kpi-sub">Strict 1:1 Fixed RR</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">Total Trades Executed</div>
+            <div class="kpi-value">647</div>
+            <div class="kpi-sub">3,772 Daily Cash Sessions</div>
+        </div>
+    </div>
+
+    <!-- EXPANDED EQUITY CURVE WITH 100K BASELINE & DUAL GREEN/RED SHADING -->
+    <div class="section-card">
+        <div class="section-title">
+            <span>Cumulative Strategy Equity Curve (Anchored at $100k Bottom Baseline)</span>
+            <div class="chart-legend-box">
+                <span><span class="legend-dot" style="background: #e3b341;"></span>$100k Starting Baseline</span>
+                <span><span class="legend-dot" style="background: #3fb950;"></span>Profit Zone (> $100k)</span>
+                <span><span class="legend-dot" style="background: #f85149;"></span>Drawdown Zone (< $100k)</span>
+            </div>
+        </div>
+        <div id="equityChart" style="height: 560px;"></div>
+    </div>
+
+    <!-- ANNUAL PERFORMANCE -->
+    <div class="section-card">
+        <div class="section-title">Annual Performance Breakdown Across 15 Calendar Years</div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Year</th>
+                    <th>Total Trades</th>
+                    <th>Wins</th>
+                    <th>Losses</th>
+                    <th>Win Rate %</th>
+                    <th>Annual P&L ($)</th>
+                    <th>Annual Return %</th>
+                </tr>
+            </thead>
+            <tbody>
+
+                <tr>
+                    <td><strong>2011</strong></td>
+                    <td>49</td>
+                    <td>24</td>
+                    <td>25</td>
+                    <td><strong class="green">48.98%</strong></td>
+                    <td class="red"><strong>$-1,203.98</strong></td>
+                    <td class="red"><strong>-1.20%</strong></td>
+                </tr>
+        
+                <tr>
+                    <td><strong>2012</strong></td>
+                    <td>51</td>
+                    <td>22</td>
+                    <td>29</td>
+                    <td><strong class="green">43.14%</strong></td>
+                    <td class="red"><strong>$-6,744.81</strong></td>
+                    <td class="red"><strong>-6.74%</strong></td>
+                </tr>
+        
+                <tr>
+                    <td><strong>2013</strong></td>
+                    <td>26</td>
+                    <td>16</td>
+                    <td>10</td>
+                    <td><strong class="green">61.54%</strong></td>
+                    <td class="green"><strong>$+5,771.20</strong></td>
+                    <td class="green"><strong>+5.77%</strong></td>
+                </tr>
+        
+                <tr>
+                    <td><strong>2014</strong></td>
+                    <td>31</td>
+                    <td>17</td>
+                    <td>14</td>
+                    <td><strong class="green">54.84%</strong></td>
+                    <td class="green"><strong>$+2,787.94</strong></td>
+                    <td class="green"><strong>+2.79%</strong></td>
+                </tr>
+        
+                <tr>
+                    <td><strong>2015</strong></td>
+                    <td>39</td>
+                    <td>22</td>
+                    <td>17</td>
+                    <td><strong class="green">56.41%</strong></td>
+                    <td class="green"><strong>$+4,747.68</strong></td>
+                    <td class="green"><strong>+4.75%</strong></td>
+                </tr>
+        
+                <tr>
+                    <td><strong>2016</strong></td>
+                    <td>41</td>
+                    <td>21</td>
+                    <td>20</td>
+                    <td><strong class="green">51.22%</strong></td>
+                    <td class="green"><strong>$+874.84</strong></td>
+                    <td class="green"><strong>+0.87%</strong></td>
+                </tr>
+        
+                <tr>
+                    <td><strong>2017</strong></td>
+                    <td>17</td>
+                    <td>10</td>
+                    <td>7</td>
+                    <td><strong class="green">58.82%</strong></td>
+                    <td class="green"><strong>$+2,909.32</strong></td>
+                    <td class="green"><strong>+2.91%</strong></td>
+                </tr>
+        
+                <tr>
+                    <td><strong>2018</strong></td>
+                    <td>49</td>
+                    <td>31</td>
+                    <td>18</td>
+                    <td><strong class="green">63.27%</strong></td>
+                    <td class="green"><strong>$+13,786.46</strong></td>
+                    <td class="green"><strong>+13.79%</strong></td>
+                </tr>
+        
+                <tr>
+                    <td><strong>2019</strong></td>
+                    <td>29</td>
+                    <td>13</td>
+                    <td>16</td>
+                    <td><strong class="green">44.83%</strong></td>
+                    <td class="red"><strong>$-3,315.97</strong></td>
+                    <td class="red"><strong>-3.32%</strong></td>
+                </tr>
+        
+                <tr>
+                    <td><strong>2020</strong></td>
+                    <td>56</td>
+                    <td>26</td>
+                    <td>30</td>
+                    <td><strong class="green">46.43%</strong></td>
+                    <td class="red"><strong>$-3,453.19</strong></td>
+                    <td class="red"><strong>-3.45%</strong></td>
+                </tr>
+        
+                <tr>
+                    <td><strong>2021</strong></td>
+                    <td>40</td>
+                    <td>21</td>
+                    <td>19</td>
+                    <td><strong class="green">52.50%</strong></td>
+                    <td class="green"><strong>$+2,822.22</strong></td>
+                    <td class="green"><strong>+2.82%</strong></td>
+                </tr>
+        
+                <tr>
+                    <td><strong>2022</strong></td>
+                    <td>87</td>
+                    <td>41</td>
+                    <td>46</td>
+                    <td><strong class="green">47.13%</strong></td>
+                    <td class="red"><strong>$-3,892.56</strong></td>
+                    <td class="red"><strong>-3.89%</strong></td>
+                </tr>
+        
+                <tr>
+                    <td><strong>2023</strong></td>
+                    <td>48</td>
+                    <td>28</td>
+                    <td>20</td>
+                    <td><strong class="green">58.33%</strong></td>
+                    <td class="green"><strong>$+8,570.07</strong></td>
+                    <td class="green"><strong>+8.57%</strong></td>
+                </tr>
+        
+                <tr>
+                    <td><strong>2024</strong></td>
+                    <td>40</td>
+                    <td>27</td>
+                    <td>13</td>
+                    <td><strong class="green">67.50%</strong></td>
+                    <td class="green"><strong>$+15,623.17</strong></td>
+                    <td class="green"><strong>+15.62%</strong></td>
+                </tr>
+        
+                <tr>
+                    <td><strong>2025</strong></td>
+                    <td>44</td>
+                    <td>25</td>
+                    <td>19</td>
+                    <td><strong class="green">56.82%</strong></td>
+                    <td class="green"><strong>$+6,604.61</strong></td>
+                    <td class="green"><strong>+6.60%</strong></td>
+                </tr>
+        
+            </tbody>
+        </table>
+    </div>
+
+    <!-- SETUP AND PATTERN BREAKDOWN -->
+    <div class="section-card">
+        <div class="section-title">Setup Architecture & Candlestick Pattern Statistics</div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+            <div>
+                <h4 style="font-size: 13px; color: var(--accent-blue); margin-bottom: 12px; letter-spacing: 0.5px;">4H SETUP ARCHITECTURE</h4>
+                <table>
+                    <thead>
+                        <tr><th>Setup Structure</th><th>Trades</th><th>Win Rate %</th></tr>
+                    </thead>
+                    <tbody>
+<tr><td><strong>Bear Flag Breakdown (Retest)</strong></td><td>158</td><td class='green'><strong>48.73%</strong></td></tr><tr><td><strong>Bull Flag Breakout (Retest)</strong></td><td>315</td><td class='green'><strong>52.70%</strong></td></tr><tr><td><strong>Resistance 3-Tap Breakout (Retest)</strong></td><td>152</td><td class='green'><strong>57.24%</strong></td></tr><tr><td><strong>Support 3-Tap Breakdown (Retest)</strong></td><td>22</td><td class='green'><strong>63.64%</strong></td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div>
+                <h4 style="font-size: 13px; color: var(--accent-blue); margin-bottom: 12px; letter-spacing: 0.5px;">30M CONFIRMATION PATTERNS</h4>
+                <table>
+                    <thead>
+                        <tr><th>Candlestick Pattern</th><th>Trades</th><th>Win Rate %</th></tr>
+                    </thead>
+                    <tbody>
+<tr><td><strong>Bearish Retest Rejection Candle</strong></td><td>165</td><td class='green'><strong>49.70%</strong></td></tr><tr><td><strong>Bullish Retest Bounce Candle</strong></td><td>432</td><td class='green'><strong>54.63%</strong></td></tr><tr><td><strong>Hammer Retest Rejection</strong></td><td>34</td><td class='green'><strong>47.06%</strong></td></tr><tr><td><strong>Shooting Star Retest Rejection</strong></td><td>14</td><td class='green'><strong>57.14%</strong></td></tr><tr><td><strong>Three Black Crows Off Retest</strong></td><td>1</td><td class='green'><strong>100.00%</strong></td></tr><tr><td><strong>Three White Soldiers Off Retest</strong></td><td>1</td><td class='green'><strong>100.00%</strong></td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ENLARGED TRADE PATTERN SCREENSHOT GALLERY -->
+    <div class="section-card">
+        <div class="section-title">
+            <span>Verified 4H Support/Resistance & Flag Pattern Charts (Enlarged High-Resolution View)</span>
+            <span class="badge">80 Verified Setups Saved in /screenshots</span>
+        </div>
+        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 18px;">
+            Every chart displays the 4H Support/Resistance or Flag zone with verified 3-tap annotations (Tap 1, Tap 2, Tap 3), 
+            the 30M breakout confirmation candle, entry line, Stop Loss (1R), and Take Profit (1:1 RR). Click any chart to open the high-res inspector.
+        </p>
+        <div class="gallery-grid">
+
+            <div class="gallery-item" onclick="openModal('../screenshots/Trade_10_SPY_Bearish_Retest_Rejection_Candle.png')">
+                <img src="../screenshots/Trade_10_SPY_Bearish_Retest_Rejection_Candle.png" alt="Trade_10_SPY_Bearish_Retest_Rejection_Candle.png" loading="lazy">
+                <div class="gallery-caption">
+                    <span>Trade_10_SPY_Bearish_Retest_Rejection_Candle.png</span>
+                    <span class="btn-view">Inspect Full Size</span>
+                </div>
+            </div>
+        
+            <div class="gallery-item" onclick="openModal('../screenshots/Trade_10_SPY_Bear_Flag___Level_Breakdown_Candle.png')">
+                <img src="../screenshots/Trade_10_SPY_Bear_Flag___Level_Breakdown_Candle.png" alt="Trade_10_SPY_Bear_Flag___Level_Breakdown_Candle.png" loading="lazy">
+                <div class="gallery-caption">
+                    <span>Trade_10_SPY_Bear_Flag___Level_Breakdown_Candle.png</span>
+                    <span class="btn-view">Inspect Full Size</span>
+                </div>
+            </div>
+        
+            <div class="gallery-item" onclick="openModal('../screenshots/Trade_11_SPY_Bearish_Retest_Rejection_Candle.png')">
+                <img src="../screenshots/Trade_11_SPY_Bearish_Retest_Rejection_Candle.png" alt="Trade_11_SPY_Bearish_Retest_Rejection_Candle.png" loading="lazy">
+                <div class="gallery-caption">
+                    <span>Trade_11_SPY_Bearish_Retest_Rejection_Candle.png</span>
+                    <span class="btn-view">Inspect Full Size</span>
+                </div>
+            </div>
+        
+            <div class="gallery-item" onclick="openModal('../screenshots/Trade_11_SPY_Bear_Flag___Level_Breakdown_Candle.png')">
+                <img src="../screenshots/Trade_11_SPY_Bear_Flag___Level_Breakdown_Candle.png" alt="Trade_11_SPY_Bear_Flag___Level_Breakdown_Candle.png" loading="lazy">
+                <div class="gallery-caption">
+                    <span>Trade_11_SPY_Bear_Flag___Level_Breakdown_Candle.png</span>
+                    <span class="btn-view">Inspect Full Size</span>
+                </div>
+            </div>
+        
+            <div class="gallery-item" onclick="openModal('../screenshots/Trade_12_SPY_Bullish_Retest_Bounce_Candle.png')">
+                <img src="../screenshots/Trade_12_SPY_Bullish_Retest_Bounce_Candle.png" alt="Trade_12_SPY_Bullish_Retest_Bounce_Candle.png" loading="lazy">
+                <div class="gallery-caption">
+                    <span>Trade_12_SPY_Bullish_Retest_Bounce_Candle.png</span>
+                    <span class="btn-view">Inspect Full Size</span>
+                </div>
+            </div>
+        
+            <div class="gallery-item" onclick="openModal('../screenshots/Trade_12_SPY_Bull_Flag___Level_Breakout_Candle.png')">
+                <img src="../screenshots/Trade_12_SPY_Bull_Flag___Level_Breakout_Candle.png" alt="Trade_12_SPY_Bull_Flag___Level_Breakout_Candle.png" loading="lazy">
+                <div class="gallery-caption">
+                    <span>Trade_12_SPY_Bull_Flag___Level_Breakout_Candle.png</span>
+                    <span class="btn-view">Inspect Full Size</span>
+                </div>
+            </div>
+        
+            <div class="gallery-item" onclick="openModal('../screenshots/Trade_13_SPY_Bullish_Retest_Bounce_Candle.png')">
+                <img src="../screenshots/Trade_13_SPY_Bullish_Retest_Bounce_Candle.png" alt="Trade_13_SPY_Bullish_Retest_Bounce_Candle.png" loading="lazy">
+                <div class="gallery-caption">
+                    <span>Trade_13_SPY_Bullish_Retest_Bounce_Candle.png</span>
+                    <span class="btn-view">Inspect Full Size</span>
+                </div>
+            </div>
+        
+            <div class="gallery-item" onclick="openModal('../screenshots/Trade_13_SPY_Three_White_Soldiers_Expansion.png')">
+                <img src="../screenshots/Trade_13_SPY_Three_White_Soldiers_Expansion.png" alt="Trade_13_SPY_Three_White_Soldiers_Expansion.png" loading="lazy">
+                <div class="gallery-caption">
+                    <span>Trade_13_SPY_Three_White_Soldiers_Expansion.png</span>
+                    <span class="btn-view">Inspect Full Size</span>
+                </div>
+            </div>
+        
+            <div class="gallery-item" onclick="openModal('../screenshots/Trade_14_SPY_Bear_Flag___Level_Breakdown_Candle.png')">
+                <img src="../screenshots/Trade_14_SPY_Bear_Flag___Level_Breakdown_Candle.png" alt="Trade_14_SPY_Bear_Flag___Level_Breakdown_Candle.png" loading="lazy">
+                <div class="gallery-caption">
+                    <span>Trade_14_SPY_Bear_Flag___Level_Breakdown_Candle.png</span>
+                    <span class="btn-view">Inspect Full Size</span>
+                </div>
+            </div>
+        
+            <div class="gallery-item" onclick="openModal('../screenshots/Trade_14_SPY_Bullish_Retest_Bounce_Candle.png')">
+                <img src="../screenshots/Trade_14_SPY_Bullish_Retest_Bounce_Candle.png" alt="Trade_14_SPY_Bullish_Retest_Bounce_Candle.png" loading="lazy">
+                <div class="gallery-caption">
+                    <span>Trade_14_SPY_Bullish_Retest_Bounce_Candle.png</span>
+                    <span class="btn-view">Inspect Full Size</span>
+                </div>
+            </div>
+        
+            <div class="gallery-item" onclick="openModal('../screenshots/Trade_15_SPY_Bearish_Retest_Rejection_Candle.png')">
+                <img src="../screenshots/Trade_15_SPY_Bearish_Retest_Rejection_Candle.png" alt="Trade_15_SPY_Bearish_Retest_Rejection_Candle.png" loading="lazy">
+                <div class="gallery-caption">
+                    <span>Trade_15_SPY_Bearish_Retest_Rejection_Candle.png</span>
+                    <span class="btn-view">Inspect Full Size</span>
+                </div>
+            </div>
+        
+            <div class="gallery-item" onclick="openModal('../screenshots/Trade_15_SPY_Bear_Flag___Level_Breakdown_Candle.png')">
+                <img src="../screenshots/Trade_15_SPY_Bear_Flag___Level_Breakdown_Candle.png" alt="Trade_15_SPY_Bear_Flag___Level_Breakdown_Candle.png" loading="lazy">
+                <div class="gallery-caption">
+                    <span>Trade_15_SPY_Bear_Flag___Level_Breakdown_Candle.png</span>
+                    <span class="btn-view">Inspect Full Size</span>
+                </div>
+            </div>
+        
+            <div class="gallery-item" onclick="openModal('../screenshots/Trade_16_SPY_Bearish_Retest_Rejection_Candle.png')">
+                <img src="../screenshots/Trade_16_SPY_Bearish_Retest_Rejection_Candle.png" alt="Trade_16_SPY_Bearish_Retest_Rejection_Candle.png" loading="lazy">
+                <div class="gallery-caption">
+                    <span>Trade_16_SPY_Bearish_Retest_Rejection_Candle.png</span>
+                    <span class="btn-view">Inspect Full Size</span>
+                </div>
+            </div>
+        
+            <div class="gallery-item" onclick="openModal('../screenshots/Trade_16_SPY_Three_Black_Crows_Contraction.png')">
+                <img src="../screenshots/Trade_16_SPY_Three_Black_Crows_Contraction.png" alt="Trade_16_SPY_Three_Black_Crows_Contraction.png" loading="lazy">
+                <div class="gallery-caption">
+                    <span>Trade_16_SPY_Three_Black_Crows_Contraction.png</span>
+                    <span class="btn-view">Inspect Full Size</span>
+                </div>
+            </div>
+        
+            <div class="gallery-item" onclick="openModal('../screenshots/Trade_17_SPY_Bull_Flag___Level_Breakout_Candle.png')">
+                <img src="../screenshots/Trade_17_SPY_Bull_Flag___Level_Breakout_Candle.png" alt="Trade_17_SPY_Bull_Flag___Level_Breakout_Candle.png" loading="lazy">
+                <div class="gallery-caption">
+                    <span>Trade_17_SPY_Bull_Flag___Level_Breakout_Candle.png</span>
+                    <span class="btn-view">Inspect Full Size</span>
+                </div>
+            </div>
+        
+            <div class="gallery-item" onclick="openModal('../screenshots/Trade_17_SPY_Shooting_Star_Retest_Rejection.png')">
+                <img src="../screenshots/Trade_17_SPY_Shooting_Star_Retest_Rejection.png" alt="Trade_17_SPY_Shooting_Star_Retest_Rejection.png" loading="lazy">
+                <div class="gallery-caption">
+                    <span>Trade_17_SPY_Shooting_Star_Retest_Rejection.png</span>
+                    <span class="btn-view">Inspect Full Size</span>
+                </div>
+            </div>
+        
+        </div>
+    </div>
+
+    <!-- MODAL LIGHTBOX -->
+    <div id="imageModal" class="modal" onclick="closeModal()">
+        <span class="modal-close" onclick="closeModal()">&times;</span>
+        <img class="modal-content" id="modalImg">
+    </div>
+
+    <script>
+        function openModal(imgSrc) {
+            document.getElementById('modalImg').src = imgSrc;
+            document.getElementById('imageModal').style.display = 'flex';
+        }
+        function closeModal() {
+            document.getElementById('imageModal').style.display = 'none';
+        }
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') closeModal();
+        });
+
+        // --- PLOTLY DUAL-COLORED EQUITY CURVE ANCHORED AT 100K ---
+        const rawEquity = [100000.0, 99000.0, 99990.0, 100989.9, 99980.00099999999, 98980.20098999998, 97990.39898009998, 98970.30296990098, 99960.00599959999, 98960.405939604, 97970.80188020796, 98950.50989901004, 97961.00480001993, 96981.39475201973, 96011.58080449952, 96971.69661254452, 97941.41357866996, 98920.82771445667, 97931.6194373121, 98910.93563168522, 97921.82627536837, 96942.60801261468, 97912.03409274083, 96932.91375181342, 97902.24288933155, 98881.26531822486, 97892.45266504261, 96913.52813839218, 95944.39285700826, 96903.83678557834, 95934.79841772256, 94975.45043354534, 94025.69592920989, 93085.4389699178, 94016.29335961698, 93076.1304260208, 92145.3691217606, 93066.82281297821, 92136.15458484842, 91214.79303899994, 92126.94096938994, 91205.67155969604, 92117.728275293, 91196.55099254007, 90284.58548261467, 89381.73962778853, 90275.55702406641, 89372.80145382574, 90266.529468364, 91169.19476304764, 92080.88671067811, 93001.69557778489, 93931.71253356274, 92992.39540822711, 92062.47145414483, 92983.09616868629, 92053.26520699942, 92973.79785906941, 93903.5358376601, 92964.50047928351, 92034.85547449067, 91114.50691974576, 92025.65198894322, 92945.90850883265, 93875.36759392098, 94814.12126986019, 93865.98005716159, 94804.63985773321, 93856.59345915588, 92918.02752456431, 93847.20779980996, 94785.67987780806, 95733.53667658614, 96690.872043352, 95723.96332291848, 94766.7236896893, 95714.39092658619, 96671.53483585204, 97638.25018421056, 98614.63268605266, 97628.48635919213, 98604.77122278405, 99590.81893501189, 98594.91074566178, 99580.8598531184, 98585.05125458722, 97599.20074204134, 96623.20873462093, 95656.97664727471, 94700.40688080197, 93753.40281199395, 94690.93684011389, 93744.02747171275, 94681.46774642987, 95628.28242389417, 96584.5652481331, 95618.71959565177, 96574.90679160829, 97540.65585952437, 98516.06241811962, 99501.22304230081, 100496.23527272382, 101501.19762545105, 100486.18564919654, 101491.0475056885, 102505.95798074538, 103531.01756055283, 104566.32773615836, 105611.99101351995, 106668.11092365514, 105601.42981441859, 106657.44411256278, 107724.01855368841, 108801.25873922529, 107713.24615183304, 108790.37861335136, 107702.47482721785, 106625.45007894568, 105559.19557815623, 106614.7875339378, 105548.63965859842, 106604.1260551844, 107670.16731573625, 108746.86898889362, 109834.33767878255, 110932.68105557039, 109823.35424501468, 108725.12070256453, 107637.86949553888, 106561.49080058349, 105495.87589257765, 104440.91713365188, 103396.50796231536, 104430.47304193852, 105474.7777723579, 106529.52555008148, 107594.82080558229, 106518.87259752647, 105453.6838715512, 104399.14703283568, 103355.15556250732, 102321.60400688225, 103344.82004695106, 102311.37184648155, 101288.25812801674, 100275.37554673657, 101278.12930220393, 100265.3480091819, 99262.69452909008, 98270.06758379917, 99252.76825963716, 98260.2405770408, 97277.63817127039, 96304.86178955769, 95341.81317166211, 94388.39503994549, 95332.27899034494, 94378.95620044149, 93435.16663843708, 94369.51830482145, 93425.82312177324, 92491.56489055551, 91566.64924164995, 92482.31573406645, 93407.13889140711, 94341.21028032119, 95284.6223831244, 94331.77615929315, 93388.45839770022, 94322.34298167723, 95265.566411494, 94312.91074737906, 93369.78163990527, 92436.08382350621, 91511.72298527115, 90596.60575541844, 89690.63969786426, 88793.73330088562, 89681.67063389448, 90578.48734023342, 89672.70246683109, 90569.4294914994, 91475.12378641439, 92389.87502427853, 91465.97627403574, 90551.31651129539, 89645.80334618244, 90542.26137964426, 91447.6839934407, 90533.2071535063, 89627.87508197124, 88731.59633115154, 87844.28036784002, 88722.72317151842, 87835.49593980324, 86957.14098040521, 86087.56957060116, 85226.69387489515, 86078.96081364411, 86939.75042178055, 87809.14792599836, 86931.05644673838, 86061.745882271, 85201.12842344829, 86053.13970768277, 86913.6711047596, 86044.534393712, 86904.97973764912, 87774.0295350256, 88651.76983037587, 89538.28752867962, 88642.90465339282, 87756.47560685889, 88634.04036292748, 87747.6999592982, 88625.17695889118, 89511.4287284801, 88616.3144411953, 89502.47758560725, 90397.50236146332, 91301.47738507796, 90388.46261122718, 91292.34723733945, 92205.27070971284, 91283.21800261571, 92196.05018264188, 91274.08968081546, 92186.83057762362, 93108.69888339986, 94039.78587223386, 94980.1837309562, 95929.98556826575, 96889.28542394841, 97858.1782781879, 98836.76006096978, 97848.39246036009, 98826.87638496369, 99815.14514881333, 98816.9936973252, 99805.16363429846, 100803.21527064143, 99795.18311793503, 98797.23128675568, 99785.20359962323, 98787.351563627, 97799.47804799073, 98777.47282847064, 99765.24755675535, 98767.5950811878, 99755.27103199968, 98757.71832167968, 99745.29550489648, 100742.74845994545, 101750.1759445449, 100732.67418509944, 99725.34744324845, 98728.09396881597, 99715.37490850413, 98718.22115941909, 97731.0389478249, 96753.72855834664, 97721.26584393012, 98698.47850236941, 99685.46328739311, 98688.60865451918, 99675.49474106437, 98678.73979365372, 99665.52719159026, 98668.87191967435, 99655.56063887109, 100652.1162452598, 101658.63740771239, 102675.22378178952, 101648.47154397162, 100631.98682853191, 101638.30669681724, 102654.68976378541, 101628.14286614757, 102644.42429480904, 103670.86853775712, 102634.15985237955, 103660.50145090335, 104697.10646541238, 105744.0775300665, 106801.51830536716, 107869.53348842084, 106790.83815353664, 105722.92977200127, 106780.15906972128, 105712.35747902407, 106769.4810538143, 107837.17586435245, 106758.80410570893, 107826.39214676601, 108904.65606823367, 107815.60950755133, 108893.76560262684, 107804.82794660056, 108882.87622606657, 107794.04746380591, 106716.10698916785, 105648.94591927617, 106705.43537846893, 105638.38102468425, 104581.9972144374, 103536.17724229304, 104571.53901471596, 103525.8236245688, 102490.56538832311, 101465.65973443988, 102480.31633178427, 103505.11949510212, 104540.17069005314, 105585.57239695368, 104529.71667298414, 105575.01383971398, 106630.76397811112, 107697.07161789223, 106620.1009017133, 107686.30191073044, 108763.16492983775, 107675.53328053937, 106598.77794773398, 105532.79016825664, 106588.11806993921, 107653.9992506386, 108730.53924314499, 107643.23385071354, 108719.66618922068, 107632.46952732847, 106556.14483205519, 105490.58338373463, 106545.48921757197, 105480.03432539625, 106534.8346686502, 107600.1830153367, 106524.18118518333, 107589.42299703517, 106513.52876706482, 107578.66405473548, 108654.45069528284, 109740.99520223566, 108643.5852502133, 107557.14939771117, 106481.57790373405, 107546.39368277139, 106470.92974594368, 105406.22044848424, 104352.1582439994, 103308.6366615594, 104341.723028175, 103298.30579789325, 104331.28885587218, 103287.97596731345, 102255.09620764032, 101232.54524556392, 102244.87069801956, 103267.31940499975, 104299.99259904976, 105342.99252504026, 104289.56259978986, 105332.45822578776, 106385.78280804564, 105321.92497996519, 106375.14422976485, 107438.8956720625, 108513.28462878312, 109598.41747507095, 110694.40164982167, 109587.45763332344, 108491.5830569902, 107406.66722642031, 106332.6005541561, 107395.92655969766, 106321.96729410069, 107385.18696704169, 108459.0388367121, 107374.44844834498, 108448.19293282843, 109532.67486215671, 110628.00161077827, 111734.28162688605, 110616.93881061718, 109510.76942251102, 108415.66172828591, 109499.81834556877, 108404.82016211309, 109488.86836373422, 110583.75704737156, 109477.91947689785, 110572.69867166683, 109466.97168495017, 110561.64140179967, 109456.02498778168, 108361.46473790387, 109445.07938528291, 108350.62859143008, 109434.13487734439, 108339.79352857094, 109423.19146385665, 108328.95954921808, 109412.24914471027, 108318.12665326316, 109401.30791979578, 110495.32099899375, 111600.27420898368, 112716.27695107352, 113843.43972058425, 114981.8741177901, 116131.692858968, 114970.37593037833, 116120.07968968211, 114958.87889278529, 113809.29010385743, 114947.38300489601, 113797.90917484705, 112659.93008309859, 113786.52938392958, 114924.39467776887, 116073.63862454655, 117234.37501079202, 116062.0312606841, 117222.65157329095, 116050.42505755804, 114889.92080698245, 113741.02159891263, 114878.43181490176, 116027.21613305078, 117187.48829438128, 116015.61341143747, 114855.4572773231, 113706.90270454988, 112569.83367750439, 113695.53201427944, 114832.48733442223, 113684.16246107801, 112547.32083646723, 113672.7940448319, 114809.52198528021, 115957.617205133, 117117.19337718433, 115946.0214434125, 114786.56122897837, 115934.42684126816, 114775.08257285548, 115922.83339858403, 114763.60506459819, 113615.96901395221, 112479.80932381269, 113604.60741705082, 114740.65349122132, 115888.06002613353, 117046.94062639488, 115876.47122013093, 117035.23593233225, 118205.58829165557, 119387.64417457212, 118193.7677328264, 117011.83005549813, 115841.71175494314, 117000.12887249257, 118170.1301612175, 116988.42885960532, 115818.54457100928, 114660.35912529918, 113513.75553404618, 114648.89308938665, 115795.38202028052, 114637.42820007772, 115783.80248207849, 114625.96445725771, 115772.22410183029, 116929.94634284859, 115760.6468794201, 114603.04041062591, 115749.07081473217, 116906.56152287949, 118075.62713810829, 119256.38340948937, 118063.81957539447, 119244.45777114842, 120436.9023488599, 121641.2713723485, 122857.684086072, 121629.10724521127, 120412.81617275917, 121616.94433448676, 122833.11377783163, 121604.78264005332, 122820.83046645386, 124049.0387711184, 122808.54838340722, 121580.46289957315, 122796.26752856887, 121568.30485328319, 122783.98790181603, 124011.8277808342, 125251.94605864254, 126504.46551922896, 125239.42086403667, 123987.0266553963, 122747.15638884234, 121519.68482495392, 122734.88167320346, 123962.2304899355, 125201.85279483485, 123949.8342668865, 122710.33592421762, 123937.4392834598, 125176.81367629439, 123925.04553953145, 125164.29599492677, 123912.6530349775, 125151.77956532728, 126403.29736098055, 127667.33033459036, 126390.65703124445, 127654.5636015569, 126378.01796554134, 127641.79814519675, 128918.21612664872, 127629.03396538223, 128905.32430503605, 130194.37754808641, 131496.32132356727, 132811.28453680294, 131483.1716914349, 132798.00340834924, 131470.02337426573, 132784.72360800838, 131456.8763719283, 132771.44513564758, 131443.7306842911, 130129.2933774482, 128828.0004436737, 127539.72043923697, 126264.3232348446, 127526.96646719305, 126251.69680252112, 127514.21377054634, 128789.3559082518, 127501.46234916929, 128776.47697266098, 127488.71220293437, 128763.59932496371, 130051.23531821335, 128750.72296503122, 127463.21573538092, 126188.5835780271, 127450.46941380737, 126175.9647196693, 124914.2050724726, 126163.34712319732, 127424.9805944293, 126150.73078848502, 127412.23809636987, 128686.36047733357, 127399.49687256024, 128673.49184128584, 127386.75692287298, 128660.62449210172, 129947.23073702274, 128647.7584296525, 129934.23601394903, 131233.57837408854, 132545.91415782942, 131220.45501625113, 129908.25046608862, 128609.16796142774, 129895.25964104201, 128596.30704463158, 127310.34397418526, 126037.24053444341, 127297.61293978784, 128570.58906918572, 129856.29495987757, 128557.73201027879, 129843.30933038158, 131141.7424236854, 129830.32499944855, 131128.62824944305, 129817.34196694862, 131115.5153866181, 129804.3602327519, 128506.31663042438, 129791.37979672862, 131089.29359469592, 132400.18653064288, 133724.1883959493, 132386.9465119898, 133710.8159771097, 132373.7078173386, 131049.97073916522, 132360.47044655686, 133684.07515102244, 135020.91590253267, 136371.125061558, 135007.41381094244, 136357.48794905187, 137721.06282854237, 139098.2734568278, 140489.25619139607, 141894.14875331003, 143313.09024084313, 141879.9593384347, 140461.15974505036, 141865.77134250087, 143284.42905592587, 141851.5847653666, 143270.10061302027, 144702.80161915047, 143255.77360295897, 141823.2158669294, 140404.9837082601, 141809.03354534268, 143227.1238807961, 144659.39511960407, 143212.80116840804, 144644.92918009212, 146091.37847189305, 144630.46468717413, 143184.16004030238, 141752.31843989936, 140334.79525550036, 141738.14320805535, 140320.7617759748, 141723.96939373453, 143141.2090876719, 144572.6211785486, 146018.3473903341, 147478.53086423743, 146003.74555559506, 144543.7081000391, 143098.27101903872, 144529.2537292291, 145974.54626652139, 147434.2917291866, 145959.94881189475, 147419.5483000137, 148893.74378301384, 147404.8063451837, 145930.75828173186, 144471.45069891453, 145916.16520590367, 144457.00355384464, 145901.57358938307, 147360.5893252769, 145886.98343202414];
+        const xVals = Array.from({length: rawEquity.length}, (_, i) => i);
+        const baselineVal = 100000;
+        
+        // 1. Baseline Trace at $100,000
+        const traceBaseline = {
+            x: [0, rawEquity.length - 1],
+            y: [baselineVal, baselineVal],
+            mode: 'lines',
+            line: { color: '#e3b341', width: 2, dash: 'dash' },
+            name: 'Initial Capital ($100k Baseline)',
+            hoverinfo: 'none'
+        };
+        
+        // 2. Trace Above 100k (Green Profit Zone)
+        const yAbove = rawEquity.map(v => Math.max(v, baselineVal));
+        const traceGreen = {
+            x: xVals,
+            y: yAbove,
+            mode: 'lines',
+            line: { color: '#3fb950', width: 2.5 },
+            fill: 'tonexty',
+            fillcolor: 'rgba(63, 185, 80, 0.18)',
+            name: 'Profit Zone (> $100k)'
+        };
+        
+        // 3. Baseline for below fill
+        const traceBaseline2 = {
+            x: xVals,
+            y: Array(rawEquity.length).fill(baselineVal),
+            mode: 'lines',
+            line: { color: 'transparent', width: 0 },
+            showlegend: false,
+            hoverinfo: 'none'
+        };
+        
+        // 4. Trace Below 100k (Red Drawdown Zone)
+        const yBelow = rawEquity.map(v => Math.min(v, baselineVal));
+        const traceRed = {
+            x: xVals,
+            y: yBelow,
+            mode: 'lines',
+            line: { color: '#f85149', width: 2.5 },
+            fill: 'tonexty',
+            fillcolor: 'rgba(248, 81, 73, 0.28)',
+            name: 'Drawdown Zone (< $100k)'
+        };
+        
+        // 5. True Equity Line
+        const traceTrueEquity = {
+            x: xVals,
+            y: rawEquity,
+            mode: 'lines',
+            line: { color: '#ffffff', width: 1.5, opacity: 0.85 },
+            name: 'Net Strategy Equity ($)'
+        };
+        
+        const minVal = Math.min(...rawEquity);
+        const maxVal = Math.max(...rawEquity);
+        const yMinRange = Math.min(94000, minVal - 2000);
+        const yMaxRange = maxVal + 4000;
+        
+        const layout = {
+            paper_bgcolor: '#141a22',
+            plot_bgcolor: '#141a22',
+            margin: { t: 30, r: 30, b: 50, l: 75 },
+            xaxis: {
+                title: 'Completed Trades Sequence (1 to ' + rawEquity.length + ')',
+                gridcolor: '#2a3340',
+                color: '#8b949e',
+                showgrid: true
+            },
+            yaxis: {
+                title: 'Account Net Equity ($USD)',
+                gridcolor: '#2a3340',
+                color: '#8b949e',
+                tickformat: '$,.0f',
+                range: [yMinRange, yMaxRange],
+                showgrid: true,
+                zeroline: false
+            },
+            legend: {
+                x: 0.02,
+                y: 0.96,
+                bgcolor: 'rgba(20, 26, 34, 0.85)',
+                bordercolor: '#2a3340',
+                borderwidth: 1,
+                font: { color: '#c9d1d9', size: 11 }
+            }
+        };
+        
+        Plotly.newPlot('equityChart', [traceBaseline, traceGreen, traceBaseline2, traceRed, traceTrueEquity], layout, {responsive: true});
+    </script>
+</body>
+</html>
