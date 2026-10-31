@@ -180,16 +180,16 @@ backtest_system/
 ### 1. Re-Run the Backtest Suite
 To re-run the entire 15-year simulation from scratch:
 ```powershell
-python C:\Users\zakiy\backtest_system\run_15y_backtest.py
+python C:\Users\...\backtest_system\run_15y_backtest.py
 ```
 
 ### 2. Open the Dashboard UI
 To open the interactive dashboard in your browser:
 ```powershell
-Start-Process "C:\Users\zakiy\backtest_system\ui\index.html"
+Start-Process "C:\Users\....\backtest_system\ui\index.html"
 ```
 
 ### 3. Open the Formal Word Report
 ```powershell
-Start-Process "C:\Users\zakiy\backtest_system\reports\15_Year_Macro_Backtest_Report.docx"
+Start-Process "C:\Users\...\backtest_system\reports\15_Year_Macro_Backtest_Report.docx"
 ```
